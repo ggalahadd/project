@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Главная страница</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>    
+    <h2>Добавить запись</h2>
+    <form id="noteForm" action="/addnote" method="POST">
+        <label for="note">Текст записи:</label>
+        <input type="text" id="note" name="note" required><br><br>
+        <input type="submit" value="Опубликовать">
+    </form>
+
+    <h2>Записи:</h2>
+    <div id="notes">
+        <!-- Здесь будут отображаться записи из базы данных -->
+    </div>
+
+    <script>
+        // Функция для загрузки и отображения записей с сервера
+        function loadNotes() {
+            $.ajax({
+                url: '/getnotes',
+                method: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    const notesHtml = data.notes.map(note => `<p>${note}</p>`).join('');
+                    $('#notes').html(notesHtml);
+                },
+                error: function() {
+                    console.error('Ошибка при загрузке записей');
+                }
+            });
+        }
+
+        // Функция для загрузки логина пользователя
+        function loadUsername() {
+            $.ajax({
+                url: '/checkauth', // Создайте маршрут на сервере для проверки аутентификации
+                method: 'GET',
+                success: function(data) {
+                    if (data.authenticated) {
+                        // Если пользователь авторизован, отображаем его логин
+                        $('#username').text(data.username); // data.username должен содержать логин пользователя
+                    } else {
+                        // Если пользователь не авторизован, перенаправляем его на страницу авторизации
+                        window.location.href = '/';
+                    }
+                },
+                error: function() {
+                    console.error('Ошибка при проверке аутентификации');
+                }
+            });
+        }
+
+        // Вызываем функции загрузки при загрузке страницы
+        $(document).ready(function() {
+            loadUsername(); // Загружаем логин пользователя
+            loadNotes(); // Загружаем записи
+        });
+
+        // Обновляем список записей после успешной отправки новой записи
+        $('#noteForm').submit(function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: '/checkauth', // Создайте маршрут на сервере для проверки аутентификации
+                method: 'GET',
+                success: function(data) {
+                    if (data.authenticated) {
+                        // Если пользователь авторизован, отправляем данные формы
+                        $.ajax({
+                            url: '/addnote',
+                            method: 'POST',
+                            data: $('#noteForm').serialize(),
+                            success: function() {
+                                loadNotes(); // Обновляем список записей
+                                $('#note').val(''); // Очищаем поле ввода после отправки
+                            },
+                            error: function() {
+                                console.error('Ошибка при добавлении записи');
+                            }
+                        });
+                    } else {
+                        // Если пользователь не авторизован, перенаправляем его на страницу авторизации
+                        window.location.href = '/';
+                    }
+                },
+                error: function() {
+                    console.error('Ошибка при проверке аутентификации');
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
